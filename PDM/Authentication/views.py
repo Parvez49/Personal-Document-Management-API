@@ -18,10 +18,32 @@ from rest_framework.exceptions import AuthenticationFailed
 from jwt.exceptions import ExpiredSignatureError, DecodeError
 import datetime
 
-from .serializers import PasswordResetSerializer
+
+from drf_yasg import openapi
+from drf_yasg.utils import swagger_auto_schema
+
+
 
 
 @csrf_exempt
+@swagger_auto_schema(
+    method='post',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'email': openapi.Schema(type=openapi.TYPE_STRING),
+            'password': openapi.Schema(type=openapi.TYPE_STRING),
+            'confirm_password': openapi.Schema(type=openapi.TYPE_STRING),
+        },
+        required=['email', 'password','confirm_password']
+    ),
+    responses={
+        200: openapi.Response('Take token for account verification', schema=openapi.Schema(type=openapi.TYPE_STRING)),
+        400: openapi.Response('Bad Request', schema=openapi.Schema(type=openapi.TYPE_STRING)),
+        401: openapi.Response('Unauthorized', schema=openapi.Schema(type=openapi.TYPE_STRING)),
+        403: openapi.Response('Forbidden', schema=openapi.Schema(type=openapi.TYPE_STRING)),
+    }
+)
 @api_view(['POST'])
 def create_account(request):
     request.data['username']=request.data['email']
@@ -40,18 +62,9 @@ def create_account(request):
         token = jwt.encode(payload, 'secret', algorithm='HS256')
         response = Response() 
         response.set_cookie(key='activation', value=token, httponly=True) # Set cookie
-        
-        # ----------Email Send------------
-        """
-        email=request.data['email']
-        email_subject="Activate your account"
-        message=f"http://127.0.0.1:8090/auth/verify-account/{token}/"
-        send_mail(email_subject,message,settings.EMAIL_HOST_USER,[email])
-        response.data="Activation token has been sent in your gmail"
-        """
-        response.data=f"Your account activation link: http://127.0.0.1:8090/auth/verify-account/{token}/"
+        response.data=f"Your account activation token: {token}"
         return response
-    return Response(serializer.errors, status=400)
+    return Response(serializer.errors)
 
 
 @api_view(['GET'])
@@ -80,7 +93,24 @@ def account_verify(request,token):
 
 
 
-@csrf_exempt
+
+@swagger_auto_schema(
+    method='post',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'email': openapi.Schema(type=openapi.TYPE_STRING),
+            'password': openapi.Schema(type=openapi.TYPE_STRING),
+        },
+        required=['email', 'password']
+    ),
+    responses={
+        200: openapi.Response('Successfully logged in', schema=openapi.Schema(type=openapi.TYPE_STRING)),
+        400: openapi.Response('Bad Request', schema=openapi.Schema(type=openapi.TYPE_STRING)),
+        401: openapi.Response('Unauthorized', schema=openapi.Schema(type=openapi.TYPE_STRING)),
+        403: openapi.Response('Forbidden', schema=openapi.Schema(type=openapi.TYPE_STRING)),
+    }
+)
 @api_view(['POST'])
 def login_user(request):
     email = request.data['email']
@@ -116,6 +146,47 @@ def logout_user(request):
 
 
 
+@swagger_auto_schema(
+    method='post',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'email': openapi.Schema(type=openapi.TYPE_STRING),
+        },
+        required=['email']
+    ),
+    responses={
+        200: openapi.Response('Success: This user is now Super User', schema=openapi.Schema(type=openapi.TYPE_STRING)),
+        400: openapi.Response('Bad Request', schema=openapi.Schema(type=openapi.TYPE_STRING)),
+        401: openapi.Response('Unauthorized', schema=openapi.Schema(type=openapi.TYPE_STRING)),
+        403: openapi.Response('Forbidden', schema=openapi.Schema(type=openapi.TYPE_STRING)),
+    }
+)
+@api_view(['POST'])
+def makeAdmin(request):
+    token=request.COOKIES.get("logintoken")
+    if not token:
+        return Response("Loggin first")
+    try:
+        payload = jwt.decode(token, 'secret', algorithms=['HS256'])
+    except ExpiredSignatureError:
+        raise AuthenticationFailed('Unauthenticated!')
+    except DecodeError:
+        raise AuthenticationFailed('Unauthenticated!')
+    
+    user=User.objects.get(id=payload['id'])
+    if user.is_superuser==False:
+        return Response("you are not Admin or Superuser...")
+    candidate=User.objects.filter(email=request.data['email']).first()
+    if not candidate:
+        return Response("User Not Found")
+    else:
+        candidate.is_superuser=True
+        candidate.save()
+        return Response("Success")
+    
+
+"""
 @csrf_exempt
 @api_view(['POST'])
 def request_password_reset(request):
@@ -130,13 +201,6 @@ def request_password_reset(request):
         token = jwt.encode(payload, 'secret', algorithm='HS256')
         reset_link = f"http://127.0.0.1:8090/reset-password/{token}/"
 
-        # Send the reset link to the user's email
-        """
-        email_subject = "Password Reset"
-        message = f"Click the link below to reset your password:\n{reset_link}"
-        send_mail(email_subject, message, settings.EMAIL_HOST_USER, [user.email])
-        return Response("Password reset link has been sent to your email.")
-        """
         respones=Response()
         respones.data={reset_link}
         return respones
@@ -164,6 +228,7 @@ def reset_password(request,token):
         return Response("Password has been reset successfully.")
     else:
         return Response("New passwords do not match.")
+"""
 
 
 

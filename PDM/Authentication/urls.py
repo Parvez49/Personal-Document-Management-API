@@ -9,6 +9,6 @@ urlpatterns = [
     path('login/',login_user),
     path('logout/', logout_user),
 
-    path('request-password-reset/', request_password_reset),
-    path('reset-password/<str:token>/', reset_password),
+
+    path('makeadmin/',makeAdmin)
 ]

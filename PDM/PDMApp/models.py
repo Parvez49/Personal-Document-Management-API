@@ -20,7 +20,7 @@ class Document(models.Model):
 
 class ShareDocument(models.Model):
     document=models.ForeignKey(Document,on_delete=models.CASCADE)
-    owner=models.ForeignKey(User,on_delete=models.CASCADE,related_name='owned')
+    # owner=models.ForeignKey(User,on_delete=models.CASCADE,related_name='owned')
     sharedwith=models.ForeignKey(User,on_delete=models.CASCADE,related_name='shared_with')
 
 

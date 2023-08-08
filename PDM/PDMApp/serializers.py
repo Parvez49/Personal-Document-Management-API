@@ -43,4 +43,4 @@ class DocumentListSerializer(serializers.ModelSerializer):
 class ShareDocumentSerializer(serializers.ModelSerializer):
     class Meta:
         model = ShareDocument
-        fields = ('document', 'owner', 'sharedwith')
+        fields = ('document', 'sharedwith')
