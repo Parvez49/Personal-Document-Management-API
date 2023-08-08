@@ -27,7 +27,7 @@ from drf_yasg import openapi
 
 schema_view = get_schema_view(
    openapi.Info(
-      title="Snippets API",
+      title="PDM API",
       default_version='v1',
       description="Test description",
    ),
